@@ -16,6 +16,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.linear_model import Ridge, SGDRegressor
 from sklearn.model_selection import GridSearchCV, TimeSeriesSplit
+from sklearn.decomposition import TruncatedSVD
 
 app = typer.Typer()
 
@@ -161,6 +162,28 @@ def build_ridge_search(
         verbose=2,
     )
 
+def build_ridge_svd_pipeline(
+    preprocessor: ColumnTransformer,
+) -> Pipeline:
+    """Construye Ridge con reducción de dimensionalidad mediante TruncatedSVD."""
+
+    return Pipeline(
+        steps=[
+            ("preprocessor", preprocessor),
+            (
+                "dimensionality_reduction",
+                TruncatedSVD(
+                    n_components=50,
+                    random_state=42,
+                ),
+            ),
+            (
+                "model",
+                Ridge(alpha=100.0),
+            ),
+        ]
+    )
+
 def build_sgd_search(
     preprocessor: ColumnTransformer,
 ) -> GridSearchCV:
@@ -274,12 +297,15 @@ def log_model_run(
         cutoff_date: str,
         feature_cols: list[str],
         best_alpha: float,
+        extra_params: dict | None = None,
 ) -> str:
     """Registra un modelo, sus parámetros y métricas en MLflow."""
 
     with mlflow.start_run(run_name=run_name) as run:
         mlflow.log_param("model_type", model_name)
         mlflow.log_param("alpha", best_alpha)
+        if extra_params:
+            mlflow.log_params(extra_params)
         mlflow.log_param("split_type", "temporal")
         mlflow.log_param("cutoff_date", cutoff_date)
         mlflow.log_param(
@@ -387,8 +413,8 @@ def run_dummy_baselines(
 
             results.append(
                 {
-                    "run_id": run.info.run_id,
-                    "strategy": strategy,
+                    "model": "DummyRegressor",
+                    "configuration": f"strategy={strategy}",
                     "mae": mae,
                     "rmse": rmse,
                 }
@@ -459,6 +485,10 @@ def main(
 
     sgd_search = build_sgd_search(preprocessor)
 
+    ridge_svd_pipeline = build_ridge_svd_pipeline(
+        preprocessor,
+    )
+
     X_train, y_train, X_test, y_test = prepare_model_data(
         train,
         test,
@@ -479,6 +509,12 @@ def main(
         model_name="SGDRegressor",
     )
 
+    # Entrenar la variante de Ridge con reducción de dimensionalidad.
+    ridge_svd_pipeline.fit(
+        X_train,
+        y_train,
+    )
+
     ridge_mae, ridge_rmse = evaluate_model(
         best_ridge_pipeline,
         X_test,
@@ -489,6 +525,18 @@ def main(
         best_sgd_pipeline,
         X_test,
         y_test,
+    )
+
+    ridge_svd_mae, ridge_svd_rmse = evaluate_model(
+        ridge_svd_pipeline,
+        X_test,
+        y_test,
+    )
+
+    logger.info(
+        f"Ridge + TruncatedSVD: "
+        f"MAE={ridge_svd_mae:.4f} |"
+        f"RMSE={ridge_svd_rmse:.4f}"
     )
 
     # Seleccionar el experimento donde se registrarán todos los modelos.
@@ -508,17 +556,33 @@ def main(
     )
 
     log_model_run(
-            model=best_sgd_pipeline,
-            model_name="SGDRegressor",
-            run_name="sgd_tuned",
-            mae=sgd_mae,
-            rmse=sgd_rmse,
-            train_rows=len(train),
-            test_rows=len(test),
-            cutoff_date=cutoff_date,
-            feature_cols=feature_cols,
-            best_alpha=sgd_search.best_params_["model__alpha"],
+        model=best_sgd_pipeline,
+        model_name="SGDRegressor",
+        run_name="sgd_tuned",
+        mae=sgd_mae,
+        rmse=sgd_rmse,
+        train_rows=len(train),
+        test_rows=len(test),
+        cutoff_date=cutoff_date,
+        feature_cols=feature_cols,
+        best_alpha=sgd_search.best_params_["model__alpha"],
         )
+
+    log_model_run(
+        model=ridge_svd_pipeline,
+        model_name="Ridge+TruncatedSVD",
+        run_name="ridge_svd",
+        mae=ridge_svd_mae,
+        rmse=ridge_svd_rmse,
+        train_rows=len(train),
+        test_rows=len(test),
+        cutoff_date=cutoff_date,
+        feature_cols=feature_cols,
+        best_alpha=100.0,
+        extra_params={
+            "n_components": 50,
+        },
+    )
 
 
     logger.info(
@@ -538,6 +602,35 @@ def main(
         feature_cols=feature_cols,
         features_path=features_path,
     )
+
+    results.extend(
+        [
+            {
+                "model": "Ridge",
+                "configuration": (
+                    f"alpha={grid_search.best_params_['model__alpha']}"
+                ),
+                "mae": ridge_mae,
+                "rmse": ridge_rmse,
+            },
+            {
+                "model": "SGDRegressor",
+                "configuration": (
+                    f"alpha={sgd_search.best_params_['model__alpha']}"
+                ),
+                "mae": sgd_mae,
+                "rmse": sgd_rmse,
+            },
+            {
+                "model": "Ridge+TruncatedSVD",
+                "configuration": "alpha=100.0,n_components=50",
+                "mae": ridge_svd_mae,
+                "rmse": ridge_svd_rmse,
+            },
+        ]
+    )
+
+
 
     save_results(
         results,
