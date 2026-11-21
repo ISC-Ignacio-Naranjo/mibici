@@ -5,13 +5,13 @@ import pandas as pd
 import typer
 from loguru import logger
 
-from mibici.config import PROCESSED_DATA_DIR
+from mibici.config import MODEL_URI, PROCESSED_DATA_DIR
 from mibici.modeling.train import get_feature_groups
 
 
 app = typer.Typer()
 
-DEFAULT_MODEL_URI = "models:/mibici_demand_model@champion"
+DEFAULT_MODEL_URI = MODEL_URI
 
 
 def load_model(model_uri: str = DEFAULT_MODEL_URI) -> Any:

@@ -17,6 +17,7 @@ classifiers = [
 ]
 dependencies = [
     "black",
+    "fastapi==0.143.3",
     "flake8",
     "ipython",
     "isort",
@@ -29,11 +30,13 @@ dependencies = [
     "numpy",
     "pandas",
     "pip",
+    "pydantic==2.14.1",
     "pytest",
     "python-dotenv",
     "scikit-learn",
     "tqdm",
     "typer",
+    "uvicorn==0.54.0",
 ]
 requires-python = "~=3.11.0"
 
