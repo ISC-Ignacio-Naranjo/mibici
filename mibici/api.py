@@ -13,7 +13,7 @@ from mibici.modeling.predict import (
 class PredictionRequest(BaseModel):
     origen_id: int = Field(gt=0)
     hora: int = Field(ge=0, le=23)
-    dia_semana: int = Field(ge=0, le=23)
+    dia_semana: int = Field(ge=0, le=6)
     mes: int = Field(ge=1, le=12)
     demanda_lag_1h: float = Field(ge=0)
     demanda_lag_24h: float = Field(ge=0)
@@ -38,6 +38,22 @@ app = FastAPI(
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+@app.get("/ready")
+def readiness():
+    model = getattr(app.state, "model", None)
+
+    if model is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Model is not ready.",
+        )
+    return {
+        "status": "ready",
+        "model_uri": DEFAULT_MODEL_URI,
+    }
+
 
 @app.post("/predict", response_model=PredictionResponse)
 def predict(request: PredictionRequest):
