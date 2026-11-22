@@ -646,15 +646,31 @@ Predictive equivalence was demonstrated for the reference input.
 The container does not require an external MLflow Model Registry
 connection to load the embedded model.
 
+
 ### Container versioning
 
-Image: `miguelmuniz1/mibici-api:1.0.0`
+- Imagen: `miguelmuniz1/mibici-api:1.0.0`
+- Estado: publicada y disponible públicamente.
+- Arquitectura: linux/amd64.
+- Tamaño comprimido: 281.7 MB.
+- Repositorio: https://hub.docker.com/r/miguelmuniz1/mibici-api
 
-The image has been tagged and validated locally.
-Publication to DockerHub is pending.
+#### Descargar y ejecutar la imagen
 
-### Limitations
+```bash
+docker pull miguelmuniz1/mibici-api:1.0.0
+docker run -d --name mibici-api -p 127.0.0.1:8000:8000 miguelmuniz1/mibici-api:1.0.0
+```
 
-Updating the embedded model requires rebuilding the image.
-Reproducibility of the complete training pipeline and generalized
-predictive equivalence require additional validation.
+Documentación interactiva:
+http://localhost:8000/docs
+
+Pull Request de implementación:
+https://github.com/ISC-Ignacio-Naranjo/mibici/pull/14
+
+
+### Limitaciones
+
+- La actualización del modelo incorporado requiere reconstruir la imagen Docker.
+- La equivalencia predictiva se verificó para el caso de referencia.
+- La reproducibilidad del proceso completo de entrenamiento y la equivalencia predictiva generalizada requieren validaciones adicionales.
