@@ -562,3 +562,99 @@ The highest-priority technical improvements are:
 6. add CI/CD automation only after the training and monitoring workflow is stable.
 
 These steps extend the existing implementation without changing the core prediction problem or overstating the current maturity of the system.
+
+
+
+---
+
+## Docker Deployment & Inference Reproducibility
+
+The inference service is packaged in a self-contained Docker image
+with the exported MLflow champion model.
+
+### Runtime environment
+
+- Python 3.11
+- MLflow 3.16.1
+- Scikit-learn 1.9.1
+- FastAPI and Uvicorn
+- Version-pinned dependencies in requirements.txt
+
+### Model artifact
+
+- Registry URI: `models:/mibici_demand_model@champion`
+- Container URI: `/app/models/mibici_champion_model`
+- Serialization format: Skops
+- Artifact UUID: `ddc57f1950084e5db02a3e693c89bf76`
+- Registry version number: pending confirmation.
+
+The exported model is not tracked in Git. Before building the
+image, obtain the corresponding champion artifact from the team
+and extract it into `models/mibici_champion_model/`.
+
+SHA-256 verification of model.skops confirmed that the local
+and containerized model files are identical.
+
+### Build and run
+
+```bash
+docker build -t mibici-api:champion .
+docker run -d --name mibici-api-test -p 127.0.0.1:8000:8000 mibici-api:champion
+```
+
+### API endpoints
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | /health | Service health |
+| GET | /ready | Model readiness |
+| POST | /predict | Demand prediction |
+| GET | /docs | Interactive Swagger documentation |
+
+Swagger: http://localhost:8000/docs
+
+### Reference inference test
+
+```json
+{
+  "origen_id": 2,
+  "hora": 6,
+  "dia_semana": 3,
+  "mes": 10,
+  "demanda_lag_1h": 0.0,
+  "demanda_lag_24h": 2.0,
+  "es_fin_de_semana": 0
+}
+```
+
+### Reproducibility results
+
+| Validation | Result |
+|---|---|
+| Docker build | Successful |
+| Model loading | Successful |
+| Health endpoint | OK |
+| Readiness endpoint | Ready |
+| Prediction HTTP status | 200 |
+| Reference prediction | 1.448516592637294 |
+| Docker prediction | 1.448516592637294 |
+| Absolute difference | 0.0 |
+| Exact prediction match | True |
+| SHA-256 artifact match | True |
+
+Predictive equivalence was demonstrated for the reference input.
+The container does not require an external MLflow Model Registry
+connection to load the embedded model.
+
+### Container versioning
+
+Image: `miguelmuniz1/mibici-api:1.0.0`
+
+The image has been tagged and validated locally.
+Publication to DockerHub is pending.
+
+### Limitations
+
+Updating the embedded model requires rebuilding the image.
+Reproducibility of the complete training pipeline and generalized
+predictive equivalence require additional validation.
