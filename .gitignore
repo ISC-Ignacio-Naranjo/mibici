@@ -200,3 +200,5 @@ cython_debug/
 /mlflow.db
 .venv-runtime/
 
+/reports/drift/data_drift_report.html
+/reports/drift/data_drift_report.json
