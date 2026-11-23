@@ -1,0 +1,46 @@
+
+# Version control
+.git
+.gitignore
+
+# Virtual environments
+.venv
+.venv-runtime
+venv/
+env/
+
+# Environment variables and credentials
+.env
+.env.*
+!.env.example
+
+# Training data
+data/
+
+# MLflow local artifacts
+mlruns/
+mlartifacts/
+mlflow.db
+
+# Development files
+notebooks/
+docs/
+reports/
+tests/
+references/
+.vscode/
+
+# Python cache
+**/__pycache__/
+**/*.pyc
+.pytest_cache/
+
+# Temporary files
+*.log
+*.ipynb
+.DS_Store
+
+# Exclude other model artifacts
+models/*
+!models/mibici_champion_model/
+!models/mibici_champion_model/**
